@@ -78,7 +78,7 @@
         .file-btn { background-color: var(--accent-green); color: white; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
-        /* Estilo visual destacado para cuando la lectura hover está ACTIVADA */
+        /* Estilo visual para cuando la lectura hover está ACTIVADA */
         .pill-btn.active {
             background-color: var(--accent-green);
             color: white;
@@ -147,8 +147,15 @@
         </div>
         
         <div class="controls-group">
-            <!-- BOTÓN EN EL MENÚ SUPERIOR PARA ACTIVAR Y DESACTIVAR LA LECTURA HOVER -->
+            <!-- BOTONES DE ACCESIBILIDAD E IDIOMA -->
             <button id="hover-tts-toggle" class="pill-btn">🔊 Lectura Hover: OFF</button>
+            <select id="tts-lang">
+                <option value="es-ES">🌐 Español</option>
+                <option value="en-US">🌐 English</option>
+                <option value="fr-FR">🌐 Français</option>
+                <option value="de-DE">🌐 Deutsch</option>
+                <option value="it-IT">🌐 Italiano</option>
+            </select>
             <button id="theme-toggle" class="pill-btn">🌓 Tema</button>
             <select id="view-mode">
                 <option value="auto">Vista: Auto</option>
@@ -176,20 +183,21 @@
     <script>
         let book, rendition;
         
-        // --- LÓGICA DE ACCESIBILIDAD Y SÍNTESIS DE VOZ ---
+        // --- MÓDULO DE ACCESIBILIDAD Y VOZ MULTILINGÜE ---
         let hoverTTSEnabled = false;
         let lastTarget = null;
         const synth = window.speechSynthesis;
+        const langSelect = document.getElementById("tts-lang");
 
         function speakText(text) {
             if (!hoverTTSEnabled || !text) return;
             const cleanText = text.trim();
             if (!cleanText) return;
 
-            synth.cancel(); // Cancela la voz previa para leer inmediatamente el nuevo texto
+            synth.cancel(); // Detiene cualquier lectura en curso
 
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'es-ES';
+            utterance.lang = langSelect.value; // Utiliza el idioma seleccionado
             utterance.rate = 1;
             synth.speak(utterance);
         }
@@ -214,7 +222,7 @@
             }
         }
 
-        // Activador del botón del menú superior
+        // Interruptor ON/OFF para la lectura hover
         const ttsBtn = document.getElementById("hover-tts-toggle");
         ttsBtn.onclick = () => {
             hoverTTSEnabled = !hoverTTSEnabled;
@@ -226,7 +234,7 @@
             }
         };
 
-        // Escuchar hover en la interfaz del sistema
+        // Evento hover en la interfaz del sistema
         document.body.addEventListener('mouseover', handleHoverSpeech);
 
         // --- Cambio de Tema ---
@@ -247,6 +255,18 @@
             
             book = ePub(data);
             
+            // Detección automática del idioma del EPUB
+            book.loaded.metadata.then(metadata => {
+                if (metadata && metadata.language) {
+                    const bookLang = metadata.language.toLowerCase();
+                    if (bookLang.startsWith('en')) langSelect.value = 'en-US';
+                    else if (bookLang.startsWith('fr')) langSelect.value = 'fr-FR';
+                    else if (bookLang.startsWith('de')) langSelect.value = 'de-DE';
+                    else if (bookLang.startsWith('it')) langSelect.value = 'it-IT';
+                    else langSelect.value = 'es-ES';
+                }
+            });
+
             // --- CONFIGURACIÓN DE INTERACTIVIDAD 3.0 ---
             rendition = book.renderTo("viewer", {
                 width: "100%",
@@ -257,7 +277,7 @@
                 sandbox: "allow-same-origin allow-scripts allow-popups"
             });
 
-            // Registrar hover dentro de las páginas del libro
+            // Registrar hover en el documento interno del libro
             rendition.hooks.content.register(function(contents) {
                 contents.addStylesheetRules({
                     "body": { "margin": "0 !important", "padding": "0 !important" },
