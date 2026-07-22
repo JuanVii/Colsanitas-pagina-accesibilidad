@@ -106,23 +106,32 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 10px;
             background-color: var(--bg-dark);
             overflow: hidden;
         }
 
+        /* CORRECCIÓN DE LAYOUT: Contenedor flexible ajustado al contenido del EPUB */
         #book-wrapper {
             width: 100%;
             height: 100%;
-            max-width: 900px;
-            background: white;
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
             border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             overflow: hidden;
             position: relative;
         }
 
-        #viewer { width: 100%; height: 100%; }
+        #viewer { 
+            width: 100%; 
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
         #toc-list { list-style: none; padding: 0; }
         #toc-list li { padding: 10px; cursor: pointer; border-radius: 4px; }
@@ -189,7 +198,6 @@
         const synth = window.speechSynthesis;
         const langSelect = document.getElementById("tts-lang");
 
-        // Función para eliminar emojis y caracteres especiales no pronunciables
         function removeEmojis(text) {
             if (!text) return '';
             return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
@@ -198,14 +206,13 @@
         function speakText(text) {
             if (!hoverTTSEnabled || !text) return;
             
-            // Limpia emojis y espacios sobrantes
             const cleanText = removeEmojis(text).trim();
             if (!cleanText) return;
 
-            synth.cancel(); // Detiene cualquier lectura en curso
+            synth.cancel();
 
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = langSelect.value; // Utiliza el idioma seleccionado
+            utterance.lang = langSelect.value;
             utterance.rate = 1;
             synth.speak(utterance);
         }
@@ -213,24 +220,20 @@
         function extractReadableText(element) {
             if (!element) return '';
             
-            // 1. Manejo cuando el elemento es un MENÚ DESPLEGABLE (SELECT)
             if (element.tagName === 'SELECT') {
                 const selectedOption = element.options[element.selectedIndex];
                 return selectedOption ? selectedOption.text : '';
             }
 
-            // 2. Manejo cuando es una OPCIÓN individual dentro de un SELECT
             if (element.tagName === 'OPTION') {
                 return element.text || element.textContent || '';
             }
 
-            // 3. Manejo de IMÁGENES / ÍCONOS (se quita el prefijo "Imagen:")
             if (element.tagName === 'IMG' || element.tagName === 'SVG' || element.querySelector('img')) {
                 const img = element.tagName === 'IMG' ? element : (element.querySelector('img') || element);
-                return img.alt ? img.alt.trim() : ''; // Lee solo la descripción alt, si no tiene alt, devuelve vacío
+                return img.alt ? img.alt.trim() : '';
             }
 
-            // 4. Si es un contenedor completamente vacío o sin texto accesible
             const textContent = element.innerText || element.textContent || '';
             if (!textContent.trim() && (element.tagName === 'BODY' || element.tagName === 'HTML' || element.id === 'viewer')) {
                 return '';
@@ -251,7 +254,6 @@
             }
         }
 
-        // Interruptor ON/OFF para la lectura hover
         const ttsBtn = document.getElementById("hover-tts-toggle");
         ttsBtn.onclick = () => {
             hoverTTSEnabled = !hoverTTSEnabled;
@@ -263,7 +265,6 @@
             }
         };
 
-        // Evento hover en la interfaz del sistema
         document.body.addEventListener('mouseover', handleHoverSpeech);
 
         // --- Cambio de Tema ---
@@ -284,7 +285,6 @@
             
             book = ePub(data);
             
-            // Detección automática del idioma del EPUB
             book.loaded.metadata.then(metadata => {
                 if (metadata && metadata.language) {
                     const bookLang = metadata.language.toLowerCase();
@@ -296,7 +296,7 @@
                 }
             });
 
-            // --- CONFIGURACIÓN DE INTERACTIVIDAD 3.0 ---
+            // --- CONFIGURACIÓN DE INTERACTIVIDAD 3.0 Y ESCALADO AJUSTADO ---
             rendition = book.renderTo("viewer", {
                 width: "100%",
                 height: "100%",
@@ -306,11 +306,32 @@
                 sandbox: "allow-same-origin allow-scripts allow-popups"
             });
 
-            // Registrar hover en el documento interno del libro
+            // Inyección de estilos de centrado perfecto dentro del documento del EPUB
             rendition.hooks.content.register(function(contents) {
                 contents.addStylesheetRules({
-                    "body": { "margin": "0 !important", "padding": "0 !important" },
-                    "html": { "overflow": "hidden !important" }
+                    "html": { 
+                        "height": "100% !important", 
+                        "width": "100% !important",
+                        "display": "flex !important",
+                        "justify-content": "center !important",
+                        "align-items": "center !important",
+                        "overflow": "hidden !important",
+                        "background": "transparent !important"
+                    },
+                    "body": { 
+                        "margin": "0 auto !important", 
+                        "padding": "0 !important",
+                        "display": "flex !important",
+                        "justify-content": "center !important",
+                        "align-items": "center !important",
+                        "max-width": "100% !important",
+                        "max-height": "100% !important"
+                    },
+                    "img, svg": {
+                        "max-width": "100% !important",
+                        "max-height": "100vh !important",
+                        "object-fit": "contain !important"
+                    }
                 });
 
                 const documentDoc = contents.window.document;
@@ -328,6 +349,11 @@
                 });
             });
         }
+
+        // Auto-redimensionar al cambiar el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            if (rendition) rendition.resize();
+        });
 
         document.getElementById("file-input").onchange = (e) => {
             const file = e.target.files[0];
