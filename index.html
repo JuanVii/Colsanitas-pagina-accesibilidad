@@ -111,7 +111,6 @@
             overflow: hidden;
         }
 
-        /* CORRECCIÓN DE LAYOUT: Contenedor flexible ajustado al contenido del EPUB */
         #book-wrapper {
             width: 100%;
             height: 100%;
@@ -157,7 +156,7 @@
         
         <div class="controls-group">
             <!-- BOTONES DE ACCESIBILIDAD E IDIOMA -->
-            <button id="hover-tts-toggle" class="pill-btn">🔊 Lectura Hover: OFF</button>
+            <button id="hover-tts-toggle" class="pill-btn" title="Toca aqui para poder activar el lector con el mouse">🔊 Lectura Hover: OFF</button>
             <select id="tts-lang">
                 <option value="es-ES">🌐 Español</option>
                 <option value="en-US">🌐 English</option>
@@ -306,7 +305,6 @@
                 sandbox: "allow-same-origin allow-scripts allow-popups"
             });
 
-            // Inyección de estilos de centrado perfecto dentro del documento del EPUB
             rendition.hooks.content.register(function(contents) {
                 contents.addStylesheetRules({
                     "html": { 
@@ -349,6 +347,17 @@
                 });
             });
         }
+
+        // CARGA AUTOMÁTICA DEL ARCHIVO "piidg.epub" SI EXISTE JUNTO AL CÓDIGO
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('piidg.epub')
+                .then(response => {
+                    if (response.ok) return response.arrayBuffer();
+                    throw new Error('Archivo piidg.epub no encontrado localmente');
+                })
+                .then(buffer => loadBook(buffer))
+                .catch(err => console.log('Sugerencia: Para cargar automáticamente el libro, asegúrate de tener "piidg.epub" en la misma carpeta del HTML.'));
+        });
 
         // Auto-redimensionar al cambiar el tamaño de la ventana
         window.addEventListener('resize', () => {
