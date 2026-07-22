@@ -275,6 +275,7 @@
             if (rendition) rendition.destroy();
             document.getElementById("toc-list").innerHTML = "";
             
+            // Carga compatible con URL relativa y con ArrayBuffer (para subida manual)
             book = ePub(data);
             
             book.loaded.metadata.then(metadata => {
@@ -334,26 +335,19 @@
                 nav.toc.forEach(chapter => {
                     const li = document.createElement("li");
                     li.textContent = chapter.label;
-                    li.onclick = () => { rendition.display(chapter.href); document.getElementById("sidebar").classList.remove("open"); };
+                    li.onclick = () => { 
+                        rendition.display(chapter.href); 
+                        document.getElementById("sidebar").classList.remove("open"); 
+                    };
                     document.getElementById("toc-list").appendChild(li);
                 });
             });
         }
 
-        // CARGA AUTOMÁTICA DESDE GITHUB (Inmunidad contra Caché)
+        // CARGA AUTOMÁTICA AL ABRIR LA PÁGINA
         window.addEventListener('DOMContentLoaded', () => {
-            // Se añade un parámetro único de tiempo para forzar la carga inmediata en GitHub Pages
-            const cacheBuster = './piidg.epub?v=' + new Date().getTime();
-            
-            fetch(cacheBuster)
-                .then(response => {
-                    if (response.ok) return response.arrayBuffer();
-                    throw new Error('No se pudo encontrar el archivo piidg.epub en la raíz del repositorio.');
-                })
-                .then(buffer => {
-                    loadBook(buffer);
-                })
-                .catch(err => console.error('Error cargando el EPUB precargado:', err));
+            // Se le indica la ruta relativa directa del archivo guardado en la raíz de GitHub
+            loadBook('./piidg.epub');
         });
 
         window.addEventListener('resize', () => {
