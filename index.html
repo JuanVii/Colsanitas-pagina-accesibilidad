@@ -78,7 +78,6 @@
         .file-btn { background-color: var(--accent-green); color: white; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
-        /* Estilo visual para cuando la lectura hover está ACTIVADA */
         .pill-btn.active {
             background-color: var(--accent-green);
             color: white;
@@ -155,7 +154,6 @@
         </div>
         
         <div class="controls-group">
-            <!-- BOTONES DE ACCESIBILIDAD E IDIOMA -->
             <button id="hover-tts-toggle" class="pill-btn" title="Toca aqui para poder activar el lector con el mouse">🔊 Lectura Hover: OFF</button>
             <select id="tts-lang">
                 <option value="es-ES">🌐 Español</option>
@@ -190,8 +188,6 @@
 
     <script>
         let book, rendition;
-        
-        // --- MÓDULO DE ACCESIBILIDAD Y VOZ MULTILINGÜE ---
         let hoverTTSEnabled = false;
         let lastTarget = null;
         const synth = window.speechSynthesis;
@@ -199,12 +195,11 @@
 
         function removeEmojis(text) {
             if (!text) return '';
-            return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+            return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
         }
 
         function speakText(text) {
             if (!hoverTTSEnabled || !text) return;
-            
             const cleanText = removeEmojis(text).trim();
             if (!cleanText) return;
 
@@ -266,14 +261,12 @@
 
         document.body.addEventListener('mouseover', handleHoverSpeech);
 
-        // --- Cambio de Tema ---
         document.getElementById("theme-toggle").onclick = () => {
             const html = document.documentElement;
             const isDark = html.getAttribute('data-theme') === 'dark';
             html.setAttribute('data-theme', isDark ? 'light' : 'dark');
         };
 
-        // --- Índice ---
         document.getElementById("toggle-sidebar").onclick = () => {
             document.getElementById("sidebar").classList.toggle("open");
         };
@@ -295,7 +288,6 @@
                 }
             });
 
-            // --- CONFIGURACIÓN DE INTERACTIVIDAD 3.0 Y ESCALADO AJUSTADO ---
             rendition = book.renderTo("viewer", {
                 width: "100%",
                 height: "100%",
@@ -348,18 +340,22 @@
             });
         }
 
-        // CARGA AUTOMÁTICA DEL ARCHIVO "piidg.epub" SI EXISTE JUNTO AL CÓDIGO
+        // CARGA AUTOMÁTICA DESDE GITHUB (Inmunidad contra Caché)
         window.addEventListener('DOMContentLoaded', () => {
-            fetch('piidg.epub')
+            // Se añade un parámetro único de tiempo para forzar la carga inmediata en GitHub Pages
+            const cacheBuster = './piidg.epub?v=' + new Date().getTime();
+            
+            fetch(cacheBuster)
                 .then(response => {
                     if (response.ok) return response.arrayBuffer();
-                    throw new Error('Archivo piidg.epub no encontrado localmente');
+                    throw new Error('No se pudo encontrar el archivo piidg.epub en la raíz del repositorio.');
                 })
-                .then(buffer => loadBook(buffer))
-                .catch(err => console.log('Sugerencia: Para cargar automáticamente el libro, asegúrate de tener "piidg.epub" en la misma carpeta del HTML.'));
+                .then(buffer => {
+                    loadBook(buffer);
+                })
+                .catch(err => console.error('Error cargando el EPUB precargado:', err));
         });
 
-        // Auto-redimensionar al cambiar el tamaño de la ventana
         window.addEventListener('resize', () => {
             if (rendition) rendition.resize();
         });
