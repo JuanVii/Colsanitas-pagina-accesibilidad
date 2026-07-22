@@ -213,19 +213,27 @@
         function extractReadableText(element) {
             if (!element) return '';
             
-            // Manejo cuando el elemento es una IMAGEN
-            if (element.tagName === 'IMG' || element.tagName === 'SVG' || element.querySelector('img')) {
-                const img = element.tagName === 'IMG' ? element : (element.querySelector('img') || element);
-                if (img.alt && img.alt.trim() !== '') {
-                    return `Imagen: ${img.alt}`;
-                }
-                return 'Imagen o elemento gráfico sin descripción accesible';
+            // 1. Manejo cuando el elemento es un MENÚ DESPLEGABLE (SELECT)
+            if (element.tagName === 'SELECT') {
+                const selectedOption = element.options[element.selectedIndex];
+                return selectedOption ? selectedOption.text : '';
             }
 
-            // Si es un contenedor o la página solo tiene imágenes/sin texto
+            // 2. Manejo cuando es una OPCIÓN individual dentro de un SELECT
+            if (element.tagName === 'OPTION') {
+                return element.text || element.textContent || '';
+            }
+
+            // 3. Manejo de IMÁGENES / ÍCONOS (se quita el prefijo "Imagen:")
+            if (element.tagName === 'IMG' || element.tagName === 'SVG' || element.querySelector('img')) {
+                const img = element.tagName === 'IMG' ? element : (element.querySelector('img') || element);
+                return img.alt ? img.alt.trim() : ''; // Lee solo la descripción alt, si no tiene alt, devuelve vacío
+            }
+
+            // 4. Si es un contenedor completamente vacío o sin texto accesible
             const textContent = element.innerText || element.textContent || '';
             if (!textContent.trim() && (element.tagName === 'BODY' || element.tagName === 'HTML' || element.id === 'viewer')) {
-                return 'Página con contenido de imagen sin texto accesible';
+                return '';
             }
 
             return textContent;
@@ -234,7 +242,7 @@
         function handleHoverSpeech(e) {
             if (!hoverTTSEnabled) return;
             
-            const target = e.target.closest('p, h1, h2, h3, h4, h5, h6, li, button, a, img, option, label, figure, svg') || e.target;
+            const target = e.target.closest('p, h1, h2, h3, h4, h5, h6, li, button, a, img, select, option, label, figure, svg') || e.target;
             
             if (target && target !== lastTarget) {
                 lastTarget = target;
