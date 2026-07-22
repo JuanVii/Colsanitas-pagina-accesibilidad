@@ -189,9 +189,17 @@
         const synth = window.speechSynthesis;
         const langSelect = document.getElementById("tts-lang");
 
+        // Función para eliminar emojis y caracteres especiales no pronunciables
+        function removeEmojis(text) {
+            if (!text) return '';
+            return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+        }
+
         function speakText(text) {
             if (!hoverTTSEnabled || !text) return;
-            const cleanText = text.trim();
+            
+            // Limpia emojis y espacios sobrantes
+            const cleanText = removeEmojis(text).trim();
             if (!cleanText) return;
 
             synth.cancel(); // Detiene cualquier lectura en curso
@@ -204,16 +212,29 @@
 
         function extractReadableText(element) {
             if (!element) return '';
-            if (element.tagName === 'IMG') {
-                return element.alt ? `Imagen: ${element.alt}` : 'Imagen sin descripción';
+            
+            // Manejo cuando el elemento es una IMAGEN
+            if (element.tagName === 'IMG' || element.tagName === 'SVG' || element.querySelector('img')) {
+                const img = element.tagName === 'IMG' ? element : (element.querySelector('img') || element);
+                if (img.alt && img.alt.trim() !== '') {
+                    return `Imagen: ${img.alt}`;
+                }
+                return 'Imagen o elemento gráfico sin descripción accesible';
             }
-            return element.innerText || element.textContent || '';
+
+            // Si es un contenedor o la página solo tiene imágenes/sin texto
+            const textContent = element.innerText || element.textContent || '';
+            if (!textContent.trim() && (element.tagName === 'BODY' || element.tagName === 'HTML' || element.id === 'viewer')) {
+                return 'Página con contenido de imagen sin texto accesible';
+            }
+
+            return textContent;
         }
 
         function handleHoverSpeech(e) {
             if (!hoverTTSEnabled) return;
             
-            const target = e.target.closest('p, h1, h2, h3, h4, h5, h6, li, button, a, img, option, label') || e.target;
+            const target = e.target.closest('p, h1, h2, h3, h4, h5, h6, li, button, a, img, option, label, figure, svg') || e.target;
             
             if (target && target !== lastTarget) {
                 lastTarget = target;
