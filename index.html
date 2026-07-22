@@ -72,10 +72,18 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
+            transition: all 0.2s ease;
         }
 
         .file-btn { background-color: var(--accent-green); color: white; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+        /* Estilo visual destacado para cuando la lectura hover está ACTIVADA */
+        .pill-btn.active {
+            background-color: var(--accent-green);
+            color: white;
+            box-shadow: 0 0 8px rgba(0, 164, 153, 0.4);
+        }
 
         /* --- Layout Principal --- */
         #main-container { flex: 1; display: flex; position: relative; overflow: hidden; }
@@ -105,7 +113,7 @@
 
         #book-wrapper {
             width: 100%;
-            height: 100%; /* Ajustado para llenar el área permitida */
+            height: 100%;
             max-width: 900px;
             background: white;
             border-radius: 8px;
@@ -139,6 +147,8 @@
         </div>
         
         <div class="controls-group">
+            <!-- BOTÓN EN EL MENÚ SUPERIOR PARA ACTIVAR Y DESACTIVAR LA LECTURA HOVER -->
+            <button id="hover-tts-toggle" class="pill-btn">🔊 Lectura Hover: OFF</button>
             <button id="theme-toggle" class="pill-btn">🌓 Tema</button>
             <select id="view-mode">
                 <option value="auto">Vista: Auto</option>
@@ -166,14 +176,67 @@
     <script>
         let book, rendition;
         
-        // Cambio de Tema
+        // --- LÓGICA DE ACCESIBILIDAD Y SÍNTESIS DE VOZ ---
+        let hoverTTSEnabled = false;
+        let lastTarget = null;
+        const synth = window.speechSynthesis;
+
+        function speakText(text) {
+            if (!hoverTTSEnabled || !text) return;
+            const cleanText = text.trim();
+            if (!cleanText) return;
+
+            synth.cancel(); // Cancela la voz previa para leer inmediatamente el nuevo texto
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'es-ES';
+            utterance.rate = 1;
+            synth.speak(utterance);
+        }
+
+        function extractReadableText(element) {
+            if (!element) return '';
+            if (element.tagName === 'IMG') {
+                return element.alt ? `Imagen: ${element.alt}` : 'Imagen sin descripción';
+            }
+            return element.innerText || element.textContent || '';
+        }
+
+        function handleHoverSpeech(e) {
+            if (!hoverTTSEnabled) return;
+            
+            const target = e.target.closest('p, h1, h2, h3, h4, h5, h6, li, button, a, img, option, label') || e.target;
+            
+            if (target && target !== lastTarget) {
+                lastTarget = target;
+                const text = extractReadableText(target);
+                speakText(text);
+            }
+        }
+
+        // Activador del botón del menú superior
+        const ttsBtn = document.getElementById("hover-tts-toggle");
+        ttsBtn.onclick = () => {
+            hoverTTSEnabled = !hoverTTSEnabled;
+            ttsBtn.classList.toggle('active', hoverTTSEnabled);
+            ttsBtn.textContent = hoverTTSEnabled ? "🔊 Lectura Hover: ON" : "🔊 Lectura Hover: OFF";
+            if (!hoverTTSEnabled) {
+                synth.cancel();
+                lastTarget = null;
+            }
+        };
+
+        // Escuchar hover en la interfaz del sistema
+        document.body.addEventListener('mouseover', handleHoverSpeech);
+
+        // --- Cambio de Tema ---
         document.getElementById("theme-toggle").onclick = () => {
             const html = document.documentElement;
             const isDark = html.getAttribute('data-theme') === 'dark';
             html.setAttribute('data-theme', isDark ? 'light' : 'dark');
         };
 
-        // Índice
+        // --- Índice ---
         document.getElementById("toggle-sidebar").onclick = () => {
             document.getElementById("sidebar").classList.toggle("open");
         };
@@ -190,16 +253,19 @@
                 height: "100%",
                 flow: "paginated",
                 manager: "default",
-                allowScriptedContent: true, // Habilita scripts e interactividad
-                sandbox: "allow-same-origin allow-scripts allow-popups" // Permisos necesarios
+                allowScriptedContent: true,
+                sandbox: "allow-same-origin allow-scripts allow-popups"
             });
 
-            // Limpieza de estilos para evitar el espacio blanco interno
+            // Registrar hover dentro de las páginas del libro
             rendition.hooks.content.register(function(contents) {
                 contents.addStylesheetRules({
                     "body": { "margin": "0 !important", "padding": "0 !important" },
                     "html": { "overflow": "hidden !important" }
                 });
+
+                const documentDoc = contents.window.document;
+                documentDoc.addEventListener('mouseover', handleHoverSpeech);
             });
 
             rendition.display();
